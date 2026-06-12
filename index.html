@@ -1,0 +1,110 @@
+    code = request.args.get("code")
+
+    if not code:
+        return """
+        <html>
+        <body style="background:#111;color:white;">
+            코드 없음
+        </body>
+        </html>
+        """
+
+    token_res = requests.post(
+        "https://discord.com/api/oauth2/token",
+        data={
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": REDIRECT_URI
+        },
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+    )
+
+    token_data = token_res.json()
+
+    access_token = token_data.get("access_token")
+
+    if not access_token:
+        return f"""
+        <html>
+        <body style="background:#111;color:white;">
+            토큰 오류: {token_data}
+        </body>
+        </html>
+        """
+
+    user_res = requests.get(
+        "https://discord.com/api/users/@me",
+        headers={
+            "Authorization": f"Bearer {access_token}"
+        }
+    )
+
+    user = user_res.json()
+
+    users = load_users()
+
+    users[str(user["id"])] = {
+        "username": user["username"],
+        "access_token": access_token
+    }
+
+    save_users(users)
+
+    # ✔ 여기부터 UI 페이지
+    return f"""
+    <html>
+    <head>
+        <title>Discord 인증 완료</title>
+        <style>
+            body {{
+                margin: 0;
+                background: #0f0f0f;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                font-family: Arial;
+                color: white;
+            }}
+
+            .box {{
+                text-align: center;
+                animation: fade 0.4s ease;
+            }}
+
+            .check {{
+                font-size: 90px;
+                color: #00ff88;
+                animation: pop 0.3s ease;
+            }}
+
+            .text {{
+                font-size: 22px;
+                margin-top: 10px;
+            }}
+
+            @keyframes pop {{
+                0% {{ transform: scale(0); }}
+                100% {{ transform: scale(1); }}
+            }}
+
+            @keyframes fade {{
+                from {{ opacity: 0; }}
+                to {{ opacity: 1; }}
+            }}
+        </style>
+    </head>
+
+    <body>
+        <div class="box">
+            <div class="check">✔</div>
+            <div class="text">인증 완료</div>
+            <div class="text">해당 창은 닫으셔도 됩니다</div>
+        </div>
+    </body>
+    </html>
+    """
